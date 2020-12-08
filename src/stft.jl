@@ -10,13 +10,16 @@ struct STFT{T, F<:Union{Frequencies, AbstractRange}}
     freq::F
     time::FloatRange{Float64}
     width::Int
+    sig_length::Int
+    window::Union{Function,AbstractVector,Nothing}
 end
 
 Libc.time(s::STFT) = s.time
 freq(s::STFT) = s.freq
 vals(s::STFT) = s.stft
-# window_norm(s::STFT) = s.window_norm
 width(s::STFT) = s.width
+or_length(s::STFT) = s.sig_length
+window(s::STFT) = s.window
 
 Base.eltype(m::STFT) = eltype(vals(m))
 Base.size(m::STFT, etc...) = size(vals(m), etc...)
@@ -27,7 +30,6 @@ Base.extrema(m::STFT) = extrema(vals(m))
 # quantities we saved inside the type
 fs(s::STFT) = round(Int, width(s)/(2*first(time(s))))
 noverlap(s::STFT) = round(Int, width(s) - fs(s)*step(time(s)))
-or_length(m::STFT) = (length(time(m))-1)*50 + width(m)
 
 # We can now define the stft function, which is just a 
 # wrapper around DSP.stft.
@@ -38,8 +40,12 @@ function stft(s::AbstractVector{T}, n::Int=length(s)>>3,
                     fs::Real=1, window::Union{Function,AbstractVector,Nothing}=nothing) where T
 
     out = DSP.stft(s, n, noverlap; onesided=onesided, fs=fs, window=window)
-    STFT(out, onesided ? rfftfreq(nfft, fs) : fftfreq(nfft, fs),
-                (n/2 : n-noverlap : (size(out,2)-1)*(n-noverlap)+n/2) / fs, n)
+    STFT(out,
+        onesided ? rfftfreq(nfft, fs) : fftfreq(nfft, fs),
+        (n/2 : n-noverlap : (size(out,2)-1)*(n-noverlap)+n/2) / fs,
+        n,
+        length(s),
+        window)
 end
 
 function show_stft(m::STFT, pre = x->x) 
@@ -51,28 +57,38 @@ function show_stft(m::STFT, pre = x->x)
         yticks = (range(1,size(m,1), length= 5), F))
 end
 
-# We now define the inverse STFT.
+# We now define the inverse STFT (using overlap-add method).
 
-function addto!(dest, dof, src, sof)
-	# Function to add vectors (inspired by Compat.copyto!)
-    @assert sof <= length(src) 
-    @assert dof + length(src) - sof  <= length(dest)
-    @inbounds for i in 0:(length(src) - sof)
-        dest[i + dof] += src[i + sof]
+function istft(X::Matrix{T}, siglength::Int,
+                nperseg::Int=onesided ? (size(X, 1) - 1) << 1 : size(X, 1),
+                noverlap::Int=nperseg >> 1; onesided::Bool=true,
+                window::Union{Function,AbstractVector,Nothing}=nothing) where T
+    # check that sizes make sense
+    hopsize = nperseg - noverlap
+    window = (window == nothing) ? DSP.rect : window
+    # if window is a vector verify size
+    # if window is function generate vector
+    w = window(nperseg)
+    w2 = w .* w # for optimisation purposes
+    x = zeros(siglength)
+    scale = zeros(siglength)
+
+    # apply inverse fft with respect to frequency dimension
+    y = onesided ? irfft(X, nperseg, 1) : real(ifft(X, 1))
+
+    # overlap-add windowed inverse fft
+    for (j, i) in enumerate(1:hopsize:siglength-nperseg)
+        x[i:i+nperseg-1] += y[:, j] .* w
+        scale[i:i+nperseg-1] += w2
     end
+    
+    # return scaled signal
+    ifelse.(scale .> 1e-10, x ./ scale, x)
 end
 
-function istft(m::STFT)
-    onesided = all(freq(m) .>= 0)
-    @assert onesided
-    a = irfft(vals(m), width(m), 1)
-    x = zeros(or_length(m))
-    tmp = zeros(or_length(m))
-    for i in 1:size(a,2)
-        addto!(x, (i-1)*(width(m)-noverlap(m))+1, a[:,i], 1)
-        addto!(tmp, (i-1)*(width(m)-noverlap(m))+1, ones(size(a,1)), 1)
-    end
-    x./=(tmp)/2
+function istft(X::STFT)
+    istft(vals(X), or_length(X), width(X), noverlap(X);
+        onesided=!any(freq(X) .< 0), window=window(X))
 end
 
 function show_istft(m::STFT)
