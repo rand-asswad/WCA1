@@ -46,7 +46,21 @@ nperseg = [256, 512]
 overlap = [1/2, 2/3, 3/4, 4/5]
 
 @testset "Synthetic signals STFT-ISTFT test" begin
-    for signal in [lc, nlc, irc, isc], tol in [1e-3, 1e-5, 1e-7, 1e-10, 1e-15]
+    for signal in [lc, nlc, irc, isc], tol in [1e-5, 1e-10, 1e-15]
         @test test_stft(signal, fs, nperseg, overlap; dist=rel_dist, tolerance=tol)
+    end
+end
+
+# recorded speech signal
+import WAV
+ss, fs = WAV.wavread("../samples/speech_signal_example.wav")
+ss = reshape(ss, length(ss))
+
+nperseg = [256, 512, 1024, 2048]
+overlap = [1/2, 2/3, 3/4, 4/5]
+
+@testset "Speech signal STFT-ISTFT test" begin
+    for tol in [1e-3, 1e-4, 1e-5]
+        @test test_stft(ss, fs, nperseg, overlap; dist=rel_dist, tolerance=tol)
     end
 end
