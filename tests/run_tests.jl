@@ -1,7 +1,8 @@
 import Pkg
-Pkg.activate("../../WCA1")
+Pkg.activate("..")
 using WCA1
 
 using Test
 
 include("test_kernel.jl")
+include("test_stft.jl")
