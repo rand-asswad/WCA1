@@ -4,5 +4,7 @@ using WCA1
 
 using Test
 
+include("signals.jl")
+
 include("test_kernel.jl")
 include("test_stft.jl")

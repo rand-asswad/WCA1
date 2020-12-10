@@ -25,21 +25,14 @@ function test_stft(x::AbstractArray{T}, fs, nperseg, overlap;
     return true
 end
 
-# synthetic signals
-fs = 16000.
+# generate synthetic signals
+fs = 16000
 duration = 2
-n = round(Int, duration * fs)
 
-lc = [ n/7 <= t <= 8*n/14 ? sin(2000*2*π*t/fs+1000*t/fs*2*π*t/fs) : 0. for t in 1:n ]
-nlc = [ n/7 <= t <= 8*n/14 ? sin(3000*2*π*t/fs+2pi*150*sin(2*pi*t/fs)) : 0. for t in 1:n ]
-
-x1 = [ n/7 <= t <= 2.5*n/7 ? sin(2000*2*π*t/fs+1000*t/fs*2*π*t/fs) : 0. for t in 1:n ]
-x2= [ 3*n/7 <= t <= 4.5*n/7 ? sin(2000*2*π*t/fs+1000*t/fs*2*π*t/fs) : 0. for t in 1:n ]
-irc = x1+x2
-
-x1 = [ n/7 <= t <= 6*n/14 ? sin(2000*2*π*t/fs + 1000*t/fs*2*π*t/fs)  : 0. for t in 1:n ]
-x2 = [ n/7 <= t <= 6*n/14 ? sin(6000*2*π*t/fs - 1000*t/fs*2*π*t/fs)  : 0. for t in 1:n ]
-isc = x1 + x2
+lc = linear_chirp(fs, duration)
+nlc = nonlinear_chirp(fs, duration)
+irc = interrupted_chirp(fs, duration)
+isc = intersecting_chirp(fs, duration)
 
 # test parameters
 nperseg = [256, 512]
