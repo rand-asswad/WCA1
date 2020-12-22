@@ -8,3 +8,4 @@ include("signals.jl")
 
 include("test_kernel.jl")
 include("test_stft.jl")
+include("test_chi2.jl")

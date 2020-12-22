@@ -16,12 +16,17 @@ lift(L::Lift) = L.lift
 Libc.time(L::Lift) = L.time
 slopes(L::Lift) = L.slopes
 
-# function grad(I)
-#     g1, g2 = KernelFactors.ando3()
-#     imfilter(I, g1), imfilter(I, g2)
-# end
+grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
 
-grad(I) = imgradients(I, KernelFactors.ando3)
+function compute_chirpiness(X::STFT; threshold = 1e-3)
+    S = abs.(X.stft)
+    dw, dt = grad(S)
+
+    #dw *= length(X.freq)
+    #dt /= step(X.time)
+
+    ifelse.(abs.(dw) .> threshold, -dt ./ dw, 0)
+end
 
 function compute_slopes(SS; threshold = 1e-3, args...)
     M = abs.(vals(SS))
