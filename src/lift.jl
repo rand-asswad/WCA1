@@ -22,8 +22,8 @@ function compute_chirpiness(X::STFT; threshold = 1e-3)
     S = abs.(X.stft)
     dw, dt = grad(S)
 
-    #dw *= length(X.freq)
-    #dt /= step(X.time)
+    dw *= length(X.freq)
+    dt /= step(X.time)
 
     ifelse.(abs.(dw) .> threshold, -dt ./ dw, 0)
 end
@@ -42,26 +42,18 @@ function compute_slopes(SS; threshold = 1e-3, args...)
     G
 end
 
-# Functions to cut away too small gradients 
-function cut(G, σ1, σ2 = σ1) 
-    M = similar(G)
-    
-    m = Statistics.mean(G)
-    s = Statistics.std(G)
-    @simd for i in 1:length(M)
-        if m-σ1*s < G[i] < m+σ2*s
-            M[i] = G[i]
-        else
-            M[i] = 0.
-        end
+function auto_cut(data; p = 0.95, mode=:median)
+    if mode == :median
+        dist = Cauchy(median(data), median(abs.(data)))
+    elseif mode == :interquartile
+        dist = Cauchy(median(data), quantile(data, 0.75) - quantile(data, 0.5)/2)
+    elseif mode == :mle
+        dist = fit_mle(Cauchy, data)
+    else
+        @error("Unknown mode '$(mode)'")
+        return minimum(data), maximum(data)
     end
-    M
-end
-
-function auto_cut(G; p = 0.95, args...)
-    n(M) = sum(abs.(M-G))/sum(abs.(G))
-    C = ([ n(cut(G, σ1, σ2)) for σ1 in 1:10, σ2 in 1:10 ]).-(1-p)
-    cut(G,Tuple(findmin(abs.(C))[2])...)
+    return quantile(dist, 0.5 - p/2), quantile(dist, 0.5 + p/2)
 end
 
 
@@ -90,18 +82,19 @@ function compute_slope_matrix(M, νMin, νMax, N = 100; args...)
 end
 
 
-function slopes(SS::STFT, νMin, νMax, N = 100; args...) where {T<:Real}
-    G = compute_slopes(SS; args...)
-    #M = auto_cut(G; args...)                    ### Placeholder for automated slope detection
-    compute_slope_matrix(G, νMin, νMax, N)
+function slopes(S::STFT, N = 100; p=0.95, mode=:median, args...)
+    G = compute_slopes(S; args...)
+    a, b = auto_cut(vec(G); p=p, mode=mode)
+    compute_slope_matrix(G, a, b, N)
 end
 
+# should remove vmin and vmax
 function lift(m::STFT; νMin=-1, νMax=1, N::Int = 100,  args...)
-    slopeMatrix, Z = slopes(m, νMin, νMax, N; args...)
+    slopeMatrix, Z = slopes(m, N; args...)
 
     imgLift = zeros(eltype(m),(size(m,1),size(m,2),N))
     for i=1:size(m,1), j=1:size(m,2)
-        if slopeMatrix[i,j] != nothing
+        if slopeMatrix[i,j] !== nothing
             imgLift[i,j,slopeMatrix[i,j]] = m[i,j]
         else
             imgLift[i,j,:] = ones(N)*m[i,j] / N
