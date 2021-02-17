@@ -4,6 +4,8 @@ struct Lift{T}
     time::FloatRange{Float64}
     slopes::FloatRange{Float64}
     width::Int
+    sig_length::Int
+    window::Union{Function,AbstractVector,Nothing}
 end
 
 Base.eltype(m::Lift{T}) where T = eltype(lift(m))
@@ -16,20 +18,38 @@ lift(L::Lift) = L.lift
 Libc.time(L::Lift) = L.time
 slopes(L::Lift) = L.slopes
 
+or_length(L::Lift) = L.sig_length
+window(L::Lift) = L.window
+
 grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
 
 function compute_chirpiness(X::STFT; threshold = 1e-3)
-    S = abs.(X.stft)
-    dw, dt = grad(S)
+    dw, dt = grad(abs.(data(X)))
+    dw *= length(freq(X))
+    dt /= step(time(X))
+    @. ifelse(abs(dw) > threshold, -dt / dw, 0)
+end
 
-    dw *= length(X.freq)
-    dt /= step(X.time)
+get_ν(dw, dt; ϵ=1e-3) = abs(dw) > ϵ ? -dt/dw : 0.
+function brdcast_chirpiness(X::STFT; threshold = 1e-3)
+    dw, dt = grad(abs.(data(X)))
+    dw *= length(freq(X))
+    dt /= step(time(X))
+    get_ν.(dw, dt; ϵ=threshold)
+end
 
-    ifelse.(abs.(dw) .> threshold, -dt ./ dw, 0)
+function old_school(X::STFT; threshold = 1e-3)
+    dw, dt = grad(abs.(X.stft))
+    F = length(X.freq) * step(X.time)
+    ν = similar(dw)
+    for i in eachindex(ν)
+        ν[i] = abs(dw[i]) > threshold ? -dt[i]/(dw[i]*F) : 0.
+    end
+    ν
 end
 
 function compute_slopes(SS; threshold = 1e-3, args...)
-    M = abs.(vals(SS))
+    M = abs.(data(SS))
     gx, gy = grad(M)
     
     gx = gx * length(SS.freq)
@@ -57,7 +77,8 @@ function auto_cut(data; p = 0.95, mode=:median)
 end
 
 
-normalize(x) = (first(x)/last(x)):(step(x)/last(x)):1
+#normalize(x) = (first(x)/last(x)):(step(x)/last(x)):1
+normalize(f) = range(first(f)/last(f), 1.0; step=step(f)/last(f))
 
 rng(t) = last(t) - first(t)
 
@@ -101,13 +122,12 @@ function lift(m::STFT; νMin=-1, νMax=1, N::Int = 100,  args...)
         end
     end
 
-    Lift(imgLift, freq(m), time(m), Z, width(m))
+    Lift(imgLift, freq(m), time(m), Z, width(m), or_length(m), window(m))
 end
 
 function project(Φ::Lift)
     f = sum(Φ[:,:,:], dims = 3) |> x->dropdims(x, dims = 3)
-    STFT( f, freq(Φ), time(Φ), width(Φ) )
+    STFT(f, freq(Φ), time(Φ), width(Φ), or_length(Φ), window(Φ))
 end
 
-show_stft(m::Lift; args...) = show_stft(project(m); args...)
-show_istft(m::Lift; args...) = show_istft(project(m); args...)
+Plots.plot(L::Lift, args...; kwargs...) = plot(project(L), args...; kwargs...)

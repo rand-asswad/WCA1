@@ -1,17 +1,24 @@
 module WCA1
 
-using WAV, FFTW, OffsetArrays, Plots, ProgressMeter
+using FFTW, OffsetArrays, Plots, ProgressMeter
+using Distributions
 
-import DSP, Statistics
+import WAV, DSP, Statistics
 using DSP.Windows, ImageFiltering
 import FFTW: Frequencies, fftfreq, rfftfreq
 
-export stft, istft, show_stft, lift, project, wc_delay,
-	Lift, STFT, freq, slopes, time, normalize, show_istft
+export Signal, STFT, Lift, time, freq, data, width, slopes,
+    stft, istft, lift, project, wc_delay, normalize,
+    wavread, wavwrite, plot, plot!
 
+
+include("signal.jl")
 include("stft.jl")
 include("lift.jl")
 include("kernel.jl")
 include("wc.jl")
+
+#include("util.jl)
+#include("filters.jl")
 
 end # module

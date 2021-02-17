@@ -68,19 +68,19 @@ wavwrite(s::Signal, filename::AbstractString) = WAV.wavwrite(data(s), filename, 
 
 # Plotting methods ----------------------------------------------------------------------
 
-@recipe function plot_signal(s::Signal; axes=true, normalize=false)
+@recipe function plot_signal(s::Signal; axislabels=true, normalize=false)
     legend --> false
-    xguide --> (axes ? "Time (s)" : "")
-    yguide --> (axes ? "Amplitude" : "")
+    xguide --> (axislabels ? "Time (s)" : "")
+    yguide --> (axislabels ? "Amplitude" : "")
     if normalize; ylims --> (-1, 1) end
     return time(s), data(s)
 end
 
 """
-    plot(s::Signal; axes::Bool=true, normalize::Bool=false, kwargs...)
+    plot(s::Signal; axislabels::Bool=true, normalize::Bool=false, kwargs...)
 
 Plot recipe for Signal object.
-If `axes` is true, the default axis labels are displayed.
+If `axislabels` is true, the default axis labels are displayed.
 If `normalize` is true, the signal amplitude is normalized in [-1,+1].
 Both parameters can be overriden using the appropriate keyword arguments.
 """
