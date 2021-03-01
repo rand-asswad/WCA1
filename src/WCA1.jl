@@ -7,9 +7,10 @@ import WAV, DSP, Statistics
 using DSP.Windows, ImageFiltering
 import FFTW: Frequencies, fftfreq, rfftfreq
 
-export Signal, STFT, Lift, time, freq, data, width, slopes,
+export Signal, STFT, Lift, fs, time, freq, data, width, slopes, duration, window,
+    energy, power, hopsamples,
     stft, istft, lift, project, wc_delay, normalize,
-    wavread, wavwrite, plot, plot!
+    wavread, wavwrite
 
 
 include("signal.jl")

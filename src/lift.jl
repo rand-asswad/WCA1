@@ -1,25 +1,45 @@
-struct Lift{T}
-    lift::Array{T, 3}
+# Type definition -----------------------------------------------------------------------
+
+"""
+    Lift{T<:Complex} <: AbstractArray{T,3}
+
+Lift object type.
+
+### Fields
+- `data::Array{Complex,3}`: lift matrix I[ω,τ,ν].
+- `freq::Union{Frequencies, AbstractRange}`: frequency bins vector.
+- `time::FloatRange{Float64}`: time samples vector.
+- `slopes::FloatRange{Float64}`: slope samples vector.
+- `width::Int`: the number of samples per window.
+- `sig_length::Int`: the original signal length.
+- `window::Window`: callable window function or window values vector.
+"""
+struct Lift{T<:Complex} <: AbstractArray{T,3}
+    data::Array{T,3}
     freq::Frequencies
     time::FloatRange{Float64}
     slopes::FloatRange{Float64}
     width::Int
     sig_length::Int
-    window::Union{Function,AbstractVector,Nothing}
+    window::Window
 end
 
-Base.eltype(m::Lift{T}) where T = eltype(lift(m))
-Base.size(m::Lift{T}, etc...) where T = size(lift(m), etc...)
-Base.getindex(m::Lift{T}, etc...) where T = getindex(lift(m), etc...)
-
-width(L::Lift) = L.width
+data(L::Lift) = L.data
 freq(L::Lift) = L.freq
-lift(L::Lift) = L.lift
 Libc.time(L::Lift) = L.time
 slopes(L::Lift) = L.slopes
-
-or_length(L::Lift) = L.sig_length
+width(L::Lift) = L.width
+sig_length(L::Lift) = L.sig_length
 window(L::Lift) = L.window
+
+# Base functions for interface inheritance
+Base.size(L::Lift, args...) = size(data(L), args...)
+Base.getindex(L::Lift, args...) = getindex(data(L), args...)
+Base.setindex!(L::Lift, v, args...) = setindex!(data(L), v, args...)
+Base.similar(L::Lift, ::Type{T}) where {T} = Lift(similar(data(L)), similar(freq(L)), similar(time(L)), similar(slopes(L)), width(L), sig_length(L), window(L)) 
+#Base.showarg(io::IO, L::Lift, toplevel) = toplevel && print(io, "Lift{$(eltype(L))}")
+
+# Lift implementation -------------------------------------------------------------------
 
 grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
 
@@ -30,7 +50,7 @@ function compute_chirpiness(X::STFT; threshold = 1e-3)
     @. ifelse(abs(dw) > threshold, -dt / dw, 0)
 end
 
-get_ν(dw, dt; ϵ=1e-3) = abs(dw) > ϵ ? -dt/dw : 0.
+get_ν(dw, dt; ϵ=1e-3) = abs(dw) > ϵ ? -dt/dw : 0.0
 function brdcast_chirpiness(X::STFT; threshold = 1e-3)
     dw, dt = grad(abs.(data(X)))
     dw *= length(freq(X))
@@ -43,7 +63,7 @@ function old_school(X::STFT; threshold = 1e-3)
     F = length(X.freq) * step(X.time)
     ν = similar(dw)
     for i in eachindex(ν)
-        ν[i] = abs(dw[i]) > threshold ? -dt[i]/(dw[i]*F) : 0.
+        ν[i] = abs(dw[i]) > threshold ? -dt[i]/(dw[i]*F) : 0.0
     end
     ν
 end
@@ -62,7 +82,7 @@ function compute_slopes(SS; threshold = 1e-3, args...)
     G
 end
 
-function auto_cut(data; p = 0.95, mode=:median)
+function auto_cut(data; p = 0.95, mode=:interquartile)
     if mode == :median
         dist = Cauchy(median(data), median(abs.(data)))
     elseif mode == :interquartile
@@ -122,12 +142,27 @@ function lift(m::STFT; νMin=-1, νMax=1, N::Int = 100,  args...)
         end
     end
 
-    Lift(imgLift, freq(m), time(m), Z, width(m), or_length(m), window(m))
+    Lift(imgLift, freq(m), time(m), Z, width(m), sig_length(m), window(m))
 end
 
 function project(Φ::Lift)
     f = sum(Φ[:,:,:], dims = 3) |> x->dropdims(x, dims = 3)
-    STFT(f, freq(Φ), time(Φ), width(Φ), or_length(Φ), window(Φ))
+    STFT(f, freq(Φ), time(Φ), width(Φ), sig_length(Φ), window(Φ))
 end
 
+# Plotting methods ----------------------------------------------------------------------
+
 Plots.plot(L::Lift, args...; kwargs...) = plot(project(L), args...; kwargs...)
+Plots.plot!(L::Lift, args...; kwargs...) = plot!(project(L), args...; kwargs...)
+
+"""
+    plot(L::Lift; mode::Symbol=:spectrogram, yscale::Symbol=:identity, axislabels::Bool=true, kwargs...)
+
+Plot recipe for Lift object. Plots spectrogram or phase heatmap of projected Lift (STFT object).
+
+`mode` is either `:spectrogram` (default) or `:phase`
+If `axislabels` is true, the default axis labels are displayed.
+Can be overriden using the appropriate keyword arguments.
+The `yscale` parameter allows plotting logarithmic frequency scale.
+"""
+plot(::Lift)

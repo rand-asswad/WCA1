@@ -39,5 +39,5 @@ function wc_delay(input::Lift, α, β, γ;
 
          next!(p)
     end
-    Lift(out, freq(input), x, z, width(input))
+    Lift(out, freq(input), x, z, width(input), sig_length(input), window(input))
 end

@@ -3,34 +3,50 @@
 const FloatRange{T} = StepRangeLen{T,Base.TwicePrecision{T},Base.TwicePrecision{T}}
 
 """
-    Signal
+    Signal{T<:Real} <: AbstractVector{T}
 
 Signal object type
 
 ### Fields
-- `data::Vector{<:Real}`: signal data vector signal[t].
+- `data::Vector{T}`: signal data vector signal[t].
 - `fs::Float64`: signal sampling rate.
 - `time::FloatRange{Float64}`: time samples range.
 """
-struct Signal{T<:Real}
+struct Signal{T<:Real} <: AbstractVector{T}
     data::Vector{T}
     fs::Float64
     time::FloatRange{Float64}
 end
 
+Signal(data::Vector{T}, fs::Number) where {T<:Real} = Signal(data, Float64(fs), (0:length(data) - 1) / Float64(fs))
+
 data(s::Signal) = s.data
 fs(s::Signal) = s.fs
 Libc.time(s::Signal) = s.time
-
-Base.eltype(s::Signal) = eltype(data(s))
-Base.size(s::Signal, args...) = size(data(s), args...)
-Base.length(s::Signal, args...) = length(data(s), args...)
-Base.getindex(s::Signal, args...) = getindex(data(s), args...)
-Base.extrema(s::Signal) = extrema(data(s))
-
 duration(s::Signal) = length(s) / fs(s)
 
-Signal(data::Vector{T}, fs::Number) where {T<:Real} = Signal(data, Float64(fs), (0:length(data) - 1) / Float64(fs))
+# Base functions for interface inheritance
+Base.size(s::Signal, args...) = size(data(s), args...)
+Base.getindex(s::Signal, args...) = getindex(data(s), args...)
+Base.setindex!(s::Signal, v, args...) = setindex!(data(s), v, args...)
+Base.similar(s::Signal, ::Type{T}) where {T} = Signal(similar(data(s)), fs(s), time(s)) 
+Base.showarg(io::IO, s::Signal, toplevel) = toplevel && print(io, "Signal{$(eltype(s))} with sample rate $(Int(fs(s))) Hz")
+
+# Signal Arithmatics
+
+function Base.:+(x::Signal, y::Signal)
+    # raise error if fs(x) != fs(y)
+    Signal(data(x) + data(y), fs(x))
+end
+
+Base.:*(x::Signal, y::Number) = Signal(data(x) * y, fs(x))
+Base.:*(x::Number, y::Signal) = y * x
+
+# Signal functions
+energy(s::AbstractVector) = sum(s .* s)
+power(s::AbstractVector) = energy(s) / length(s)
+
+hopsamples(s::Signal, hop::Integer) = Signal(s[1:hop:length(s)], fs(s) / hop)
 
 # Input/Output --------------------------------------------------------------------------
 
@@ -84,4 +100,4 @@ If `axislabels` is true, the default axis labels are displayed.
 If `normalize` is true, the signal amplitude is normalized in [-1,+1].
 Both parameters can be overriden using the appropriate keyword arguments.
 """
-plot
+plot(::Signal)
