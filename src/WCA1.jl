@@ -19,7 +19,4 @@ include("lift.jl")
 include("kernel.jl")
 include("wc.jl")
 
-#include("util.jl)
-#include("filters.jl")
-
 end # module

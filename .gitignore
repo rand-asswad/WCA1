@@ -1,3 +1,22 @@
+# results
 experiments/bars-results/
+**/results/
+
+# cache
 experiments/.ipynb_checkpoints/
 .ipynb_checkpoints/
+
+# plots and samples
+samples/speech_lib/
+**/*.wav
+**/*.png
+
+# editor
+.vscode/
+
+# dev
+**/*.backup.jl
+**/*.zip
+docs/
+src/filters.jl
+src/util.jl
