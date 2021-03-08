@@ -44,7 +44,7 @@ Base.similar(L::Lift, ::Type{T}) where {T} = Lift(similar(data(L)), similar(freq
 grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
 
 get_ν(dw, dt; ε=1e-3) = abs(dw) > ε ? -dt/dw : 0.0
-function compute_chirpiness(X::STFT; threshold = 1e-3)
+function compute_chirpiness(X::STFT; threshold = 1e-3, args...)
     dw, dt = grad(abs.(data(X)))
     dw *= length(freq(X))
     dt /= step(time(X))
@@ -92,22 +92,21 @@ function compute_slope_matrix(M, νMin, νMax, N = 100; args...)
 end
 
 
-function slopes(S::STFT, N = 100; p=0.95, mode=:median, args...)
+function slopes(S::STFT, νsamples=100; νlims::Union{Nothing,Tuple{T,T}}=nothing, args...) where {T<:Number}
     G = compute_chirpiness(S; args...)
-    a, b = auto_cut(vec(G); p=p, mode=mode)
-    compute_slope_matrix(G, a, b, N)
+    a, b = νlims === nothing ? auto_cut(vec(G); args...) : νlims
+    compute_slope_matrix(G, a, b, νsamples)
 end
 
-# should remove vmin and vmax
-function lift(m::STFT; νMin=-1, νMax=1, N::Int = 100,  args...)
-    slopeMatrix, Z = slopes(m, N; args...)
+function lift(m::STFT; νsamples::Int=100, args...)
+    slopeMatrix, Z = slopes(m, νsamples; args...)
 
-    imgLift = zeros(eltype(m),(size(m,1),size(m,2),N))
+    imgLift = zeros(eltype(m), (size(m,1), size(m,2), νsamples))
     for i=1:size(m,1), j=1:size(m,2)
         if slopeMatrix[i,j] !== nothing
             imgLift[i,j,slopeMatrix[i,j]] = m[i,j]
         else
-            imgLift[i,j,:] = ones(N)*m[i,j] / N
+            imgLift[i,j,:] = ones(νsamples) * (m[i,j] / νsamples)
         end
     end
 
