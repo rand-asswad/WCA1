@@ -43,43 +43,12 @@ Base.similar(L::Lift, ::Type{T}) where {T} = Lift(similar(data(L)), similar(freq
 
 grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
 
+get_ν(dw, dt; ε=1e-3) = abs(dw) > ε ? -dt/dw : 0.0
 function compute_chirpiness(X::STFT; threshold = 1e-3)
     dw, dt = grad(abs.(data(X)))
     dw *= length(freq(X))
     dt /= step(time(X))
-    @. ifelse(abs(dw) > threshold, -dt / dw, 0)
-end
-
-get_ν(dw, dt; ϵ=1e-3) = abs(dw) > ϵ ? -dt/dw : 0.0
-function brdcast_chirpiness(X::STFT; threshold = 1e-3)
-    dw, dt = grad(abs.(data(X)))
-    dw *= length(freq(X))
-    dt /= step(time(X))
-    get_ν.(dw, dt; ϵ=threshold)
-end
-
-function old_school(X::STFT; threshold = 1e-3)
-    dw, dt = grad(abs.(X.stft))
-    F = length(X.freq) * step(X.time)
-    ν = similar(dw)
-    for i in eachindex(ν)
-        ν[i] = abs(dw[i]) > threshold ? -dt[i]/(dw[i]*F) : 0.0
-    end
-    ν
-end
-
-function compute_slopes(SS; threshold = 1e-3, args...)
-    M = abs.(data(SS))
-    gx, gy = grad(M)
-    
-    gx = gx * length(SS.freq)
-    gy = gy / step(SS.time)
-    
-    G = similar(M)
-    for i in 1:length(M)
-        G[i] = abs(gx[i]) > threshold  ? -gy[i]/gx[i] : 0.
-    end
-    G
+    get_ν.(dw, dt; ε=threshold)
 end
 
 function auto_cut(data; p = 0.95, mode=:interquartile)
@@ -124,7 +93,7 @@ end
 
 
 function slopes(S::STFT, N = 100; p=0.95, mode=:median, args...)
-    G = compute_slopes(S; args...)
+    G = compute_chirpiness(S; args...)
     a, b = auto_cut(vec(G); p=p, mode=mode)
     compute_slope_matrix(G, a, b, N)
 end
