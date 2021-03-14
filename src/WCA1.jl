@@ -10,7 +10,8 @@ import LinearAlgebra: norm
 
 export Signal, STFT, Lift, fs, time, freq, data, width, slopes, duration, window,
     energy, power, hopsamples,
-    stft, istft, lift, project, wc_delay, normalize,
+    stft, istft, lift, project, wc_delay, normalize, resync,
+    norm, distance, relative_distance, reconstruct,
     wavread, wavwrite
 
 

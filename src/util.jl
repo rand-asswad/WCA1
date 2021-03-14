@@ -66,3 +66,20 @@ function resync(s::Signal, ref::AbstractVector;
     x[1:length(s)-Δmin[2]+1] = s[Δmin[2]:length(s)]
     return verbose ? (Signal(x, fs(s)), Δ) : Signal(x, fs(s))
 end
+
+# Pipeline wrappers ---------------------------------------------------------------------
+
+"""
+    reconstruct(s::signal; α=1000, β=1, γ=500, fft_width=500, overlap=9//10, νsamples=100)
+
+Reconstructs degraded sound.
+Wrapper around Wilson-Cowan reconstruction pipeline.
+"""
+function reconstruct(s::Signal; α=1000, β=1, γ=500, fft_width=500, overlap=9//10, νsamples=100)
+    noverlap = round(Int, fft_width * overlap)
+    S = stft(s, fft_width, noverlap)
+    L = lift(S; νsamples=νsamples)
+    W = wc_delay(L, α, β, γ)
+    w = istft(project(W))
+    return resync(normalize(w, s), s)
+end
