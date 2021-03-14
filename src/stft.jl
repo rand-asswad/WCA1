@@ -21,10 +21,10 @@ Short-Time Fourier Transform object type.
 - `sig_length::Int`: the original signal length.
 - `window::Window`: callable window function or window values vector.
 """
-struct STFT{T<:Complex} <: AbstractMatrix{T}
-    data::Matrix{T}
-    freq::Union{Frequencies,AbstractRange}
-    time::FloatRange{Float64}
+struct STFT{T<:Real} <: AbstractMatrix{Complex{T}}
+    data::Matrix{Complex{T}}
+    freq::FloatRange
+    time::FloatRange
     width::Int
     sig_length::Int
     window::Window
@@ -93,9 +93,9 @@ Wrapper around `DSP.Periodograms.stft` function that computes the STFT of a `Sig
 using the overlap-add method.
 Returns an `STFT` object.
 """
-function stft(s::Signal{T}, nperseg::Int=length(s)>>6, noverlap::Int=nperseg>>1;
+function stft(s::Signal, nperseg::Int=length(s)>>6, noverlap::Int=nperseg>>1;
                 onesided::Bool=eltype(s)<:Real, nfft::Int=DSP.nextfastfft(nperseg), 
-                window::Window=hanning) where {T<:Real}
+                window::Window=hanning)
     stft(data(s), nperseg, noverlap; onesided=onesided, nfft=nfft, fs=fs(s), window=window)
 end
 

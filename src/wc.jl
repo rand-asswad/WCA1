@@ -1,5 +1,5 @@
-arg(z) = atan(imag(z), real(z))
-σ(z) = exp(im*arg(z))*min(1, max(abs(z), -1))
+arg(z::Complex) = atan(imag(z), real(z))
+σ(z::Complex) = exp(im*arg(z))*min(1, max(abs(z), -1))
 
 function wc_delay(input::Lift, α, β, γ; 
         K::Union{Nothing, Kern} = nothing, τdx = 20, 

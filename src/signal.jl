@@ -1,6 +1,6 @@
 # Type definition -----------------------------------------------------------------------
 
-const FloatRange{T} = StepRangeLen{T,Base.TwicePrecision{T},Base.TwicePrecision{T}}
+const FloatRange{T<:AbstractFloat} = Union{AbstractRange{T}, AbstractVector{T}}
 
 """
     Signal{T<:Real} <: AbstractVector{T}
@@ -14,11 +14,11 @@ Signal object type
 """
 struct Signal{T<:Real} <: AbstractVector{T}
     data::Vector{T}
-    fs::Float64
-    time::FloatRange{Float64}
+    fs::Real
+    time::FloatRange
 end
 
-Signal(data::Vector{T}, fs::Number) where {T<:Real} = Signal(data, Float64(fs), (0:length(data) - 1) / Float64(fs))
+Signal(data::Vector{T}, fs::Real) where {T<:Real} = Signal(data, fs, (0:length(data) - 1) / fs)
 
 data(s::Signal) = s.data
 fs(s::Signal) = s.fs

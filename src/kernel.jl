@@ -26,11 +26,11 @@ Container for pre-computed Kolmogorov kernel. It is a 2d `AbstractArray`,
 whose value at (i,j) is a list of (I, v), where v is the value of the 
 kernel at indexes I. 
 """
-struct Kern <: AbstractArray{Array{Tuple{CartesianIndex{2},Float64},1}, 2}
-    freq :: Union{Frequencies{Float64}, FloatRange{Float64}}
-    slopes ::FloatRange{Float64}
+struct Kern{T <: AbstractFloat} <: AbstractArray{Array{Tuple{CartesianIndex{2},T},1}, 2}
+    freq :: FloatRange{T}
+    slopes ::FloatRange{T}
     params :: KernParams
-    vals :: Array{ Array{Tuple{CartesianIndex{2},Float64},1}, 2 }
+    vals :: Array{ Array{Tuple{CartesianIndex{2},T},1}, 2 }
 end
 
 Kern(f, s, τ, b, tol, vals, idx) = Kern(f,s, KernParams(τ, b, tol), vals, idx)
@@ -106,7 +106,7 @@ end
 Creates an instance of Kernel corresponding to the given parameters. In 
 particular, it only computes it for values bigger than the tolerance.
 """
-function Kern(f::Union{Frequencies, FloatRange{Float64}}, s::FloatRange{Float64}, p = KernParams(.1, 1, 1e-3))
+function Kern(f::FloatRange, s::FloatRange, p = KernParams(.1, 1, 1e-3))
     v =  Array{ Array{Tuple{CartesianIndex{2},Float64},1}, 2 }(undef, (length(f), length(s)))
     
     for i in 1:length(f), j in 1:length(s)

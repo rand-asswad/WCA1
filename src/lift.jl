@@ -14,11 +14,11 @@ Lift object type.
 - `sig_length::Int`: the original signal length.
 - `window::Window`: callable window function or window values vector.
 """
-struct Lift{T<:Complex} <: AbstractArray{T,3}
-    data::Array{T,3}
-    freq::Frequencies
-    time::FloatRange{Float64}
-    slopes::FloatRange{Float64}
+struct Lift{T<:Real} <: AbstractArray{Complex{T},3}
+    data::Array{Complex{T},3}
+    freq::FloatRange
+    time::FloatRange
+    slopes::FloatRange
     width::Int
     sig_length::Int
     window::Window
@@ -67,7 +67,7 @@ end
 
 
 #normalize(x) = (first(x)/last(x)):(step(x)/last(x)):1
-normalize(f) = range(first(f)/last(f), 1.0; step=step(f)/last(f))
+normalize(f::FloatRange) = range(first(f)/last(f), 1.0; step=step(f)/last(f))
 
 rng(t) = last(t) - first(t)
 
