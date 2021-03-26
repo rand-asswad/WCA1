@@ -91,32 +91,19 @@ end
 #normalize(x) = (first(x)/last(x)):(step(x)/last(x)):1
 normalize(f::FloatRange) = range(first(f)/last(f), 1.0; step=step(f)/last(f))
 
-rng(t) = last(t) - first(t)
-
-zs(M, νMin, νMax, N) = range(νMin,νMax, length = N)
-
-function compute_slope_matrix(M, νMin, νMax, N = 100; args...)
-    Z = zs(M, νMin, νMax, N)
-    slopeMatrix = similar(M, Union{Int,Nothing})
-    A = round.(Int,(M .- first(Z))*(N-1)/(rng(Z)) .+ 1)
-    for i in 1:length(M)
-        if first(Z) <= M[i] <= last(Z)
-            slopeMatrix[i] = A[i]
-        elseif M[i] > last(Z)
-                slopeMatrix[i] = nothing#N
-        elseif M[i] < first(Z)
-                    slopeMatrix[i] = nothing#1
-        else
-            slopeMatrix[i] = nothing
-        end
-    end
-    slopeMatrix, Z
+@inline function discretize_chirpiness(ν, νMin, νMax, N = 100)
+    ν_vals = range(νMin, νMax, length = N)
+    #index = round(1 + (N-1)(ν - νMin)/(νMax - νMin)) = round(a⋅ν + b)
+    a = (N-1) / (νMax - νMin)
+    b = 1.0 - ((N-1) * νMin / (νMax - νMin))
+    index = [νMin<=x<=νMax ? round(Int, a*x + b) : nothing for x in ν]
+    return index, ν_vals
 end
 
 function lift(S::STFT; νsamples::Int=100, νlims::Union{Nothing,Tuple{T,T}}=nothing, sparse=false, args...) where {T<:Real}
     ν = compute_chirpiness(S; args...)
     νMin, νMax = νlims === nothing ? auto_cut(vec(ν); args...) : νlims
-    νindex, νrange = compute_slope_matrix(ν, νMin, νMax, νsamples, args...)
+    νindex, νrange = discretize_chirpiness(ν, νMin, νMax, νsamples)
 
     init_zeros = sparse ? spzeros : zeros
     L = init_zeros(eltype(S), size(S,1), size(S,2), νsamples)
