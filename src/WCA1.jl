@@ -1,8 +1,7 @@
 module WCA1
 
 using FFTW, OffsetArrays, Plots, ProgressMeter
-using Distributions
-using SparseArrays
+using Distributions, SparseArrays
 
 import WAV, DSP, Statistics
 using DSP.Windows, ImageFiltering

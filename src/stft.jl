@@ -44,7 +44,8 @@ noverlap(S::STFT) = round(Int, width(S) - fs(S) * step(time(S)))
 Base.size(S::STFT, args...) = size(data(S), args...)
 Base.getindex(S::STFT, args...) = getindex(data(S), args...)
 Base.setindex!(S::STFT, v, args...) = setindex!(data(S), v, args...)
-Base.similar(S::STFT, ::Type{T}) where {T} = STFT(similar(data(S)), similar(freq(S)), similar(time(S)), width(S), sig_length(S), window(S)) 
+Base.similar(S::STFT{T}) where {T} = similar(S, T)
+Base.similar(S::STFT, ::Type{T}) where {T<:Real} = STFT(similar(data(S), Complex{T}), freq(S), time(S), width(S), sig_length(S), window(S)) 
 Base.showarg(io::IO, S::STFT, toplevel) = toplevel && print(io, "STFT{$(eltype(S))} with fft width $(width)")
 
 # STFT implementation -------------------------------------------------------------------

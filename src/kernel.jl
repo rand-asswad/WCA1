@@ -13,11 +13,11 @@ b(p::KernParams) = p.b
 params(p::KernParams) = [p.τ, p.b, p.tol]
 
 # Explicit expression of the Kolmogorov equation kernel
-function K(t,x,y; b = 1.) 
+function K(t,x,y; b = 1.)
     g = 3*(x[1]-y[1])^2-3*(x[1]-y[1])*(x[2]+y[2])*t+t^2*(x[2]^2+x[2]*y[2]+y[2]^2)
     sqrt(3)/(2π*t^2*b)*exp(-g/(t^3*b))
 end
-K(p :: KernParams, x, y) = K(τ(p), x, y, b = b(p) )
+K(p :: KernParams, x, y) = K(τ(p), x, y, b = b(p))
 
 """
 	Kern 
@@ -30,7 +30,7 @@ struct Kern{T <: AbstractFloat} <: AbstractArray{Array{Tuple{CartesianIndex{2},T
     freq :: FloatRange{T}
     slopes ::FloatRange{T}
     params :: KernParams
-    vals :: Array{ Array{Tuple{CartesianIndex{2},T},1}, 2 }
+    vals :: Array{Vector{Tuple{CartesianIndex{2},T}}, 2}
 end
 
 Kern(f, s, τ, b, tol, vals, idx) = Kern(f,s, KernParams(τ, b, tol), vals, idx)
@@ -107,7 +107,7 @@ Creates an instance of Kernel corresponding to the given parameters. In
 particular, it only computes it for values bigger than the tolerance.
 """
 function Kern(f::FloatRange, s::FloatRange, p = KernParams(.1, 1, 1e-3))
-    v =  Array{ Array{Tuple{CartesianIndex{2},Float64},1}, 2 }(undef, (length(f), length(s)))
+    v =  Array{ Vector{Tuple{CartesianIndex{2}, Float64}}, 2 }(undef, (length(f), length(s)))
     
     for i in 1:length(f), j in 1:length(s)
         idx = threshold_idx(f, s, i, j, p)
