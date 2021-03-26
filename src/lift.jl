@@ -63,14 +63,13 @@ SparseArrays.sparse(L::Lift) = Lift(sparse(data(L)), freq(L), time(L), slopes(L)
 
 # Lift implementation -------------------------------------------------------------------
 
-grad(f::Matrix{T}) where {T<:Real} = imgradients(f, KernelFactors.ando3)
-
-get_ν(dw, dt; ε=1e-3) = abs(dw) > ε ? -dt/dw : 0.0
-function compute_chirpiness(X::STFT; threshold = 1e-3, args...)
+grad(f::Matrix) = imgradients(f, KernelFactors.ando3)
+get_ν(dw, dt, ε=1e-3) = abs(dw) > ε ? -dt/dw : 0.0
+function compute_chirpiness(X::STFT; threshold = 1e-3)
     dw, dt = grad(abs.(data(X)))
     dw *= length(freq(X))
     dt /= step(time(X))
-    get_ν.(dw, dt; ε=threshold)
+    get_ν.(dw, dt, threshold)
 end
 
 function auto_cut(data; p = 0.95, mode=:interquartile)
@@ -87,17 +86,14 @@ function auto_cut(data; p = 0.95, mode=:interquartile)
     return quantile(dist, 0.5 - p/2), quantile(dist, 0.5 + p/2)
 end
 
-
-#normalize(x) = (first(x)/last(x)):(step(x)/last(x)):1
 normalize(f::FloatRange) = range(first(f)/last(f), 1.0; step=step(f)/last(f))
 
 @inline function discretize_chirpiness(ν, νMin, νMax, N = 100)
-    ν_vals = range(νMin, νMax, length = N)
-    #index = round(1 + (N-1)(ν - νMin)/(νMax - νMin)) = round(a⋅ν + b)
     a = (N-1) / (νMax - νMin)
     b = 1.0 - ((N-1) * νMin / (νMax - νMin))
+    #index = round(1 + (N-1)(ν - νMin)/(νMax - νMin)) = round(a⋅ν + b)
     index = [νMin<=x<=νMax ? round(Int, a*x + b) : nothing for x in ν]
-    return index, ν_vals
+    return index, range(νMin, νMax, length = N)
 end
 
 function lift(S::STFT; νsamples::Int=100, νlims::Union{Nothing,Tuple{T,T}}=nothing, sparse=false, args...) where {T<:Real}
@@ -119,8 +115,8 @@ function lift(S::STFT; νsamples::Int=100, νlims::Union{Nothing,Tuple{T,T}}=not
 end
 
 function project(L::Lift)
-    f = sum(L, dims = 3) |> x->dropdims(x, dims = 3)
-    STFT(f, freq(L), time(L), width(L), sig_length(L), window(L))
+    S = sum(L, dims = 3) |> x->dropdims(x, dims = 3)
+    STFT(S, freq(L), time(L), width(L), sig_length(L), window(L))
 end
 
 # Plotting methods ----------------------------------------------------------------------
