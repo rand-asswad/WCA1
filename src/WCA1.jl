@@ -2,6 +2,7 @@ module WCA1
 
 using FFTW, OffsetArrays, Plots, ProgressMeter
 using Distributions
+using SparseArrays
 
 import WAV, DSP, Statistics
 using DSP.Windows, ImageFiltering
@@ -14,6 +15,7 @@ export Signal, STFT, Lift, fs, time, freq, data, width, slopes, duration, window
     norm, distance, relative_distance, reconstruct,
     wavread, wavwrite
 
+include("sparse.jl")
 
 include("signal.jl")
 include("stft.jl")
