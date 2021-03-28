@@ -18,7 +18,7 @@ struct Signal{T<:Real} <: AbstractVector{T}
     time::FloatRange
 end
 
-Signal(data::Vector{T}, fs::Real) where {T<:Real} = Signal(data, fs, (0:length(data) - 1) / fs)
+Signal(data::AbstractVector{T}, fs::Real) where {T<:Real} = Signal(data, fs, (0:length(data) - 1) / fs)
 
 data(s::Signal) = s.data
 fs(s::Signal) = s.fs
@@ -50,7 +50,7 @@ hopsamples(s::Signal, hop::Integer) = Signal(s[1:hop:length(s)], fs(s) / hop)
 
 # Input/Output --------------------------------------------------------------------------
 
-function stereo2mono(data::AbstractArray{T}) where {T<:Number}
+function stereo2mono(data::AbstractArray)
     if ndims(data) <= 2
         return size(data, 2) == 1 ? vec(data) : sum(data, dims=2) / size(x, 2)
     elseif size(data, 1) * size(data, 2) == length(data)
@@ -93,7 +93,7 @@ wavwrite(s::Signal, filename::AbstractString) = WAV.wavwrite(data(s), filename, 
 end
 
 """
-    plot(s::Signal; axislabels::Bool=true, normalize::Bool=false, kwargs...)
+    plot(s::Signal; axislabels=true, normalize=false, kwargs...)
 
 Plot recipe for Signal object.
 If `axislabels` is true, the default axis labels are displayed.

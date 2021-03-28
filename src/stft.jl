@@ -21,8 +21,8 @@ Short-Time Fourier Transform object type.
 - `sig_length::Int`: the original signal length.
 - `window::Window`: callable window function or window values vector.
 """
-struct STFT{T<:Real} <: AbstractMatrix{Complex{T}}
-    data::Matrix{Complex{T}}
+struct STFT{T<:Complex} <: AbstractMatrix{T}
+    data::Matrix{T}
     freq::FloatRange
     time::FloatRange
     width::Int

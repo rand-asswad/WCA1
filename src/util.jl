@@ -81,5 +81,5 @@ function reconstruct(s::Signal; α=1000, β=1, γ=500, fft_width=500, overlap=9/
     L = lift(S; νsamples=νsamples)
     W = wc_delay(L, α, β, γ)
     w = istft(project(W))
-    return resync(normalize(w, s), s)
+    return normalize(w, s) |> x -> resync(x, s)
 end
